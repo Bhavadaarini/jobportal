@@ -31,7 +31,6 @@ type Job = {
   job_description: string;
   status: string;
   created_at: string;
-  expires_at: string;
   companies: Company | null;
 };
 
@@ -76,20 +75,25 @@ export default function CandidateOffersPage() {
         // =====================================================
 
         const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-        if (userError) {
-          throw userError;
+        if (sessionError) {
+          console.error(
+            "Candidate session error:",
+            sessionError
+          );
         }
 
-        if (!user) {
+        if (!session?.user) {
           router.replace(
             "/candidate/login"
           );
           return;
         }
+
+        const user = session.user;
 
         // =====================================================
         // CANDIDATE PROFILE
@@ -140,15 +144,14 @@ export default function CandidateOffersPage() {
             job_description,
             status,
             created_at,
-            expires_at,
 
             companies (
               company_name
             )
           `)
-          .in(
+          .eq(
             "status",
-            ["Active", "Closed"]
+            "Active"
           )
           .order(
             "created_at",
@@ -201,7 +204,6 @@ export default function CandidateOffersPage() {
                   job_description: string;
                   status: string;
                   created_at: string;
-                  expires_at: string;
                   companies:
                     | Company
                     | null;
@@ -225,8 +227,6 @@ export default function CandidateOffersPage() {
                   row.status,
                 created_at:
                   row.created_at,
-                expires_at:
-                  row.expires_at,
                 companies:
                   row.companies ??
                   null,
@@ -529,9 +529,7 @@ export default function CandidateOffersPage() {
 
                     {closed
                       ? "Applications closed"
-                      : `Closes ${formatDateTime(
-                          job.expires_at
-                        )}`}
+                      : "Applications open"}
                   </div>
 
                   {/* APPLICATION BUTTON */}
@@ -622,18 +620,7 @@ function JobInfo({
 function isJobClosed(
   job: Job
 ) {
-  if (
-    job.status === "Closed"
-  ) {
-    return true;
-  }
-
-  return (
-    new Date(
-      job.expires_at
-    ).getTime() <=
-    Date.now()
-  );
+  return job.status !== "Active";
 }
 
 function formatDate(
@@ -647,22 +634,6 @@ function formatDate(
       day: "numeric",
       month: "short",
       year: "numeric",
-    }
-  );
-}
-
-function formatDateTime(
-  value: string
-) {
-  return new Date(
-    value
-  ).toLocaleString(
-    "en-IN",
-    {
-      day: "numeric",
-      month: "short",
-      hour: "numeric",
-      minute: "2-digit",
     }
   );
 }

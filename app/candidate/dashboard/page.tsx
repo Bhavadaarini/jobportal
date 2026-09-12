@@ -114,26 +114,32 @@ export default function CandidateDashboardPage() {
 
           const {
             data: {
-              user,
+              session,
             },
 
             error:
-              userError,
+              sessionError,
           } =
             await supabase.auth
-              .getUser();
+              .getSession();
 
-          if (userError) {
-            throw userError;
+          if (sessionError) {
+            console.error(
+              "Candidate session error:",
+              sessionError
+            );
           }
 
-          if (!user) {
+          if (!session?.user) {
             router.replace(
               "/candidate/login"
             );
 
             return;
           }
+
+          const user =
+            session.user;
 
           /* =================================================
              GET CANDIDATE
@@ -177,14 +183,10 @@ export default function CandidateDashboardPage() {
           /* =================================================
              GET ACTIVE OFFERS
 
-             Only count jobs that are:
-             Active
-             AND not expired
+             Job availability is now controlled manually
+             by the company. A job is available whenever
+             its status is Active.
           ================================================= */
-
-          const currentTime =
-            new Date()
-              .toISOString();
 
           const {
             data:
@@ -196,16 +198,11 @@ export default function CandidateDashboardPage() {
             .from("jobs")
             .select(`
               id,
-              status,
-              expires_at
+              status
             `)
             .eq(
               "status",
               "Active"
-            )
-            .gt(
-              "expires_at",
-              currentTime
             );
 
           if (
